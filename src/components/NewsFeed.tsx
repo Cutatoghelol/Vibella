@@ -69,11 +69,9 @@ export const NewsFeed = () => {
 
   const toggleLike = async (postId: string, isLiked: boolean) => {
     if (isLiked) {
-      await supabase.from('likes').delete().match({ post_id: postId, user_id: user?.id });
-      await supabase.rpc('decrement_likes', { post_id: postId });
+      await supabase.from('post_likes').delete().match({ post_id: postId, user_id: user?.id });
     } else {
-      await supabase.from('likes').insert({ post_id: postId, user_id: user?.id });
-      await supabase.rpc('increment_likes', { post_id: postId });
+      await supabase.from('post_likes').insert({ post_id: postId, user_id: user?.id });
     }
     loadPosts();
   };
@@ -96,7 +94,7 @@ export const NewsFeed = () => {
             Lọc theo chủ đề
           </button>
           {filterTopic && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg">
+            <div className="flex items-center gap-2 px-3 py-2 bg-rose-100 text-rose-700 rounded-lg">
               {filterTopic}
               <button onClick={() => setFilterTopic(null)}>
                 <X className="w-4 h-4" />
@@ -114,7 +112,7 @@ export const NewsFeed = () => {
                   setFilterTopic(topic);
                   setShowTopicFilter(false);
                 }}
-                className="px-3 py-1 bg-white border border-gray-300 hover:border-emerald-500 hover:text-emerald-600 rounded-full text-sm transition-colors"
+                className="px-3 py-1 bg-white border border-gray-300 hover:border-rose-500 hover:text-rose-600 rounded-full text-sm transition-colors"
               >
                 {topic}
               </button>
@@ -135,7 +133,7 @@ export const NewsFeed = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Chia sẻ hành trình sức khỏe của bạn..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"
               rows={3}
             />
             <input
@@ -143,7 +141,7 @@ export const NewsFeed = () => {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="URL hình ảnh (không bắt buộc)"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
             />
 
             <div>
@@ -154,7 +152,7 @@ export const NewsFeed = () => {
                     key={emoji}
                     onClick={() => setSelectedMood(emoji)}
                     className={`text-2xl p-2 rounded-lg transition-all ${
-                      selectedMood === emoji ? 'bg-emerald-100 scale-110' : 'hover:bg-gray-100'
+                      selectedMood === emoji ? 'bg-rose-100 scale-110' : 'hover:bg-gray-100'
                     }`}
                   >
                     {emoji}
@@ -172,7 +170,7 @@ export const NewsFeed = () => {
                     onClick={() => toggleTopic(topic)}
                     className={`px-3 py-1 rounded-full text-sm transition-all ${
                       selectedTopics.includes(topic)
-                        ? 'bg-emerald-500 text-white'
+                        ? 'bg-rose-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -185,7 +183,7 @@ export const NewsFeed = () => {
             <div className="flex gap-2">
               <button
                 onClick={createPost}
-                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all"
               >
                 <Send className="w-4 h-4" />
                 Đăng bài
@@ -232,7 +230,7 @@ const PostCard = ({
 
   const checkIfLiked = async () => {
     const { data } = await supabase
-      .from('likes')
+      .from('post_likes')
       .select('id')
       .match({ post_id: post.id, user_id: user?.id })
       .maybeSingle();
@@ -264,7 +262,7 @@ const PostCard = ({
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white font-semibold">
+        <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-full flex items-center justify-center text-white font-semibold">
           {post.profiles?.username?.[0]?.toUpperCase() || 'U'}
         </div>
         <div>
@@ -287,7 +285,7 @@ const PostCard = ({
       {post.topics && post.topics.length > 0 && (
         <div className="flex gap-2 flex-wrap mb-4">
           {post.topics.map((topic) => (
-            <span key={topic} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-sm">
+            <span key={topic} className="px-2 py-1 bg-rose-50 text-rose-600 rounded text-sm">
               {topic}
             </span>
           ))}
@@ -300,14 +298,14 @@ const PostCard = ({
             setIsLiked(!isLiked);
             onToggleLike(post.id, isLiked);
           }}
-          className={`flex items-center gap-2 ${isLiked ? 'text-red-500' : 'text-gray-600'} hover:text-red-500 transition-colors`}
+          className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors`}
         >
           <Heart className="w-5 h-5" fill={isLiked ? 'currentColor' : 'none'} />
           <span>{post.likes_count}</span>
         </button>
         <button
           onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-2 text-gray-600 hover:text-emerald-600 transition-colors"
+          className="flex items-center gap-2 text-gray-600 hover:text-rose-600 transition-colors"
         >
           <MessageCircle className="w-5 h-5" />
           <span>{post.comments_count}</span>
@@ -318,7 +316,7 @@ const PostCard = ({
         <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
           {comments.map((comment) => (
             <div key={comment.id} className="flex gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+              <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
                 {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1">
@@ -333,12 +331,12 @@ const PostCard = ({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Viết bình luận..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
               onKeyPress={(e) => e.key === 'Enter' && addComment()}
             />
             <button
               onClick={addComment}
-              className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+              className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
             >
               Gửi
             </button>
