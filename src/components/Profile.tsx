@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Target, Award, Heart } from 'lucide-react';
+import { User, Target, Award, Heart, Key } from 'lucide-react';
 
 export const Profile = () => {
   const { profile, user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [goals, setGoals] = useState(profile?.goals || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
   const [userStats, setUserStats] = useState({ posts: 0, likes: 0, achievements: 0 });
   const [achievements, setAchievements] = useState<any[]>([]);
 
@@ -84,6 +89,38 @@ export const Profile = () => {
     }
 
     setIsEditing(false);
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+
+    setPasswordSuccess('Đổi mật khẩu thành công!');
+    setNewPassword('');
+    setConfirmPassword('');
+    setTimeout(() => {
+      setShowChangePassword(false);
+      setPasswordSuccess('');
+    }, 2000);
   };
 
   return (
@@ -182,12 +219,21 @@ export const Profile = () => {
                     <h2 className="text-2xl font-bold text-gray-900">{fullName || username}</h2>
                     <p className="text-gray-600">@{username}</p>
                   </div>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
-                  >
-                    Chỉnh sửa
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowChangePassword(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <Key className="w-4 h-4" />
+                      Đổi mật khẩu
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
+                    >
+                      Chỉnh sửa
+                    </button>
+                  </div>
                 </div>
 
                 {bio && (
@@ -229,6 +275,76 @@ export const Profile = () => {
           </div>
         </div>
       </div>
+
+      {showChangePassword && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Key className="w-6 h-6 text-rose-500" />
+            <h3 className="text-xl font-bold text-gray-900">Đổi mật khẩu</h3>
+          </div>
+
+          <div className="max-w-md space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mật khẩu mới
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                placeholder="Ít nhất 6 ký tự"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Xác nhận mật khẩu mới
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                placeholder="Nhập lại mật khẩu mới"
+              />
+            </div>
+
+            {passwordError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {passwordError}
+              </div>
+            )}
+
+            {passwordSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {passwordSuccess}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleChangePassword}
+                className="px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all"
+              >
+                Đổi mật khẩu
+              </button>
+              <button
+                onClick={() => {
+                  setShowChangePassword(false);
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setPasswordError('');
+                  setPasswordSuccess('');
+                }}
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center gap-2 mb-4">
