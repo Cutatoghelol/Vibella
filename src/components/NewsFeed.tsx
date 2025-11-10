@@ -124,15 +124,20 @@ export const NewsFeed = () => {
     if (!user?.id) return;
 
     if (isLiked) {
-      await supabase.from('post_likes').delete().match({ post_id: postId, user_id: user.id });
+      const { error } = await supabase.from('post_likes').delete().match({ post_id: postId, user_id: user.id });
+      if (error) {
+        console.error('Error unliking post:', error);
+        return;
+      }
     } else {
-      await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
+      const { error } = await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
+      if (error) {
+        console.error('Error liking post:', error);
+        return;
+      }
     }
 
-    // Update leaderboard score
     await updateLeaderboardScore(user.id);
-
-    loadPosts();
   };
 
   const toggleTopic = (topic: string) => {
@@ -372,17 +377,23 @@ const PostCard = ({
   const addComment = async () => {
     if (!newComment.trim() || !user?.id) return;
 
-    await supabase.from('comments').insert({
+    const { error } = await supabase.from('comments').insert({
       post_id: post.id,
       user_id: user.id,
       content: newComment.trim(),
     });
 
-    // Update leaderboard score
+    if (error) {
+      console.error('Error adding comment:', error);
+      alert('Không thể đăng bình luận. Vui lòng thử lại.');
+      return;
+    }
+
     await updateLeaderboardScore(user.id);
 
     setNewComment('');
-    await Promise.all([loadComments(), refreshPost()]);
+    await loadComments();
+    await refreshPost();
   };
 
   const deleteComment = async (commentId: string) => {
@@ -439,12 +450,15 @@ const PostCard = ({
 
       <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
         <button
-          onClick={async () => {
-            if (!user?.id) return;
+          onClick={async (e) => {
+            e.preventDefault();
+            if (!user?.id || user.id === post.user_id) return;
+
             const currentLikedState = isLiked;
+            setIsLiked(!currentLikedState);
+
             await onToggleLike(post.id, currentLikedState);
             await refreshPost();
-            await checkIfLiked();
           }}
           disabled={user?.id === post.user_id}
           className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -494,10 +508,18 @@ const PostCard = ({
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Viết bình luận..."
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-              onKeyPress={(e) => e.key === 'Enter' && addComment()}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addComment();
+                }
+              }}
             />
             <button
-              onClick={addComment}
+              onClick={(e) => {
+                e.preventDefault();
+                addComment();
+              }}
               className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
             >
               Gửi
