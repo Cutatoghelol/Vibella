@@ -23,30 +23,47 @@ export const AIChatbot = () => {
     'Bài tập thở sâu',
   ];
 
-  const getAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
+  const getAIResponse = async (userMessage: string): Promise<string> => {
+    try {
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-    if (lowerMessage.includes('căng thẳng') || lowerMessage.includes('stress')) {
-      return 'Để giảm căng thẳng, bạn có thể thử:\n\n1. Thực hành hít thở sâu: Hít vào 4 giây, giữ 4 giây, thở ra 4 giây\n2. Tập thiền 10-15 phút mỗi ngày\n3. Tập thể dục nhẹ nhàng như đi bộ, yoga\n4. Nghe nhạc thư giãn\n5. Viết nhật ký cảm xúc\n\nHãy nhớ rằng việc chăm sóc bản thân là điều quan trọng!';
+      if (!apiKey || apiKey === 'your_openai_api_key_here') {
+        return 'Xin lỗi, OpenAI API key chưa được cấu hình. Vui lòng thêm VITE_OPENAI_API_KEY vào file .env của bạn.';
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'Bạn là một trợ lý AI chuyên về sức khỏe tinh thần và tâm lý. Hãy trả lời bằng tiếng Việt một cách thân thiện, đồng cảm và chuyên nghiệp. Đưa ra lời khuyên hữu ích về quản lý căng thẳng, lo âu, cải thiện giấc ngủ, và các kỹ thuật thư giãn. Luôn khuyến khích người dùng tìm kiếm sự giúp đỡ chuyên nghiệp khi cần thiết.',
+            },
+            {
+              role: 'user',
+              content: userMessage,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Không thể kết nối đến OpenAI API');
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error('Error calling OpenAI:', error);
+      return 'Xin lỗi, đã có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.';
     }
-
-    if (lowerMessage.includes('lo âu') || lowerMessage.includes('anxiety') || lowerMessage.includes('lo lắng')) {
-      return 'Tôi hiểu bạn đang cảm thấy lo âu. Đây là những cách có thể giúp bạn:\n\n1. Kỹ thuật 5-4-3-2-1: Nhìn 5 thứ, chạm 4 thứ, nghe 3 âm thanh, ngửi 2 mùi, nếm 1 vị\n2. Viết ra những điều bạn lo lắng\n3. Nói chuyện với người bạn tin tưởng\n4. Tập trung vào hiện tại, không nghĩ quá nhiều về tương lai\n5. Tập yoga hoặc thiền\n\nNếu lo âu kéo dài, hãy tìm sự hỗ trợ từ chuyên gia!';
-    }
-
-    if (lowerMessage.includes('giấc ngủ') || lowerMessage.includes('ngủ') || lowerMessage.includes('sleep')) {
-      return 'Để cải thiện giấc ngủ, hãy thử:\n\n1. Đi ngủ và thức dậy cùng giờ mỗi ngày\n2. Tránh caffeine sau 2 giờ chiều\n3. Tắt điện thoại 1 giờ trước khi ngủ\n4. Tạo môi trường phòng ngủ thoải mái, tối và mát\n5. Đọc sách hoặc nghe nhạc nhẹ trước khi ngủ\n6. Tránh ăn no quá trước khi ngủ\n\nGiấc ngủ tốt là nền tảng của sức khỏe tinh thần!';
-    }
-
-    if (lowerMessage.includes('thở') || lowerMessage.includes('hơi thở')) {
-      return 'Bài tập thở sâu đơn giản:\n\n1. Ngồi thoải mái, lưng thẳng\n2. Đặt một tay lên ngực, một tay lên bụng\n3. Hít vào chậm qua mũi trong 4 giây\n4. Giữ hơi trong 4 giây\n5. Thở ra chậm qua miệng trong 6 giây\n6. Lặp lại 5-10 lần\n\nThực hành hàng ngày sẽ giúp bạn cảm thấy bình yên hơn!';
-    }
-
-    if (lowerMessage.includes('thiền') || lowerMessage.includes('meditation')) {
-      return 'Hướng dẫn thiền cơ bản:\n\n1. Tìm nơi yên tĩnh\n2. Ngồi thoải mái, có thể bắt chéo chân\n3. Nhắm mắt nhẹ nhàng\n4. Tập trung vào hơi thở\n5. Khi tâm trí lang thang, nhẹ nhàng đưa về hơi thở\n6. Bắt đầu với 5-10 phút, tăng dần\n\nThiền đều đặn giúp giảm stress và tăng sự tập trung!';
-    }
-
-    return 'Cảm ơn bạn đã chia sẻ. Tôi ở đây để lắng nghe và hỗ trợ bạn. Một số chủ đề tôi có thể giúp:\n\n• Quản lý căng thẳng\n• Giảm lo âu\n• Cải thiện giấc ngủ\n• Kỹ thuật thở và thiền\n• Xây dựng thói quen tích cực\n\nBạn muốn tìm hiểu về chủ đề nào?';
   };
 
   const handleSend = async () => {
@@ -57,14 +74,22 @@ export const AIChatbot = () => {
     setInput('');
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const aiResponseContent = await getAIResponse(input);
       const aiResponse: Message = {
         role: 'assistant',
-        content: getAIResponse(input),
+        content: aiResponseContent,
       };
       setMessages((prev) => [...prev, aiResponse]);
+    } catch (error) {
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleQuickResponse = (text: string) => {
@@ -81,7 +106,7 @@ export const AIChatbot = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold">AI Trợ lý sức khỏe tinh thần</h2>
-              <p className="text-rose-100 text-sm">Luôn sẵn sàng lắng nghe và hỗ trợ bạn</p>
+              <p className="text-rose-100 text-sm">Được hỗ trợ bởi GPT-4o Mini</p>
             </div>
           </div>
         </div>
