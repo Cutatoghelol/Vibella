@@ -13,6 +13,7 @@ export type Profile = {
   bio: string | null;
   goals: string | null;
   health_goals: string[];
+  posts_count: number;
   created_at: string;
   updated_at: string;
 };

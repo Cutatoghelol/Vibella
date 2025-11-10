@@ -311,7 +311,7 @@ export const NewsFeed = () => {
 };
 
 const PostCard = ({
-  post,
+  post: initialPost,
   onToggleLike,
   onDelete,
 }: {
@@ -320,10 +320,15 @@ const PostCard = ({
   onDelete: (postId: string) => void;
 }) => {
   const { user } = useAuth();
+  const [post, setPost] = useState(initialPost);
   const [isLiked, setIsLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    setPost(initialPost);
+  }, [initialPost]);
 
   useEffect(() => {
     checkIfLiked();
@@ -350,6 +355,17 @@ const PostCard = ({
     setComments(data || []);
   };
 
+  const refreshPost = async () => {
+    const { data } = await supabase
+      .from('posts')
+      .select('*, profiles(*)')
+      .eq('id', post.id)
+      .maybeSingle();
+    if (data) {
+      setPost(data);
+    }
+  };
+
   const addComment = async () => {
     if (!newComment.trim() || !user?.id) return;
 
@@ -363,13 +379,13 @@ const PostCard = ({
     await updateLeaderboardScore(user.id);
 
     setNewComment('');
-    loadComments();
+    await Promise.all([loadComments(), refreshPost()]);
   };
 
   const deleteComment = async (commentId: string) => {
     const { error } = await supabase.from('comments').delete().eq('id', commentId);
     if (!error) {
-      loadComments();
+      await Promise.all([loadComments(), refreshPost()]);
     }
   };
 
@@ -418,9 +434,10 @@ const PostCard = ({
 
       <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
         <button
-          onClick={() => {
+          onClick={async () => {
             setIsLiked(!isLiked);
-            onToggleLike(post.id, isLiked);
+            await onToggleLike(post.id, isLiked);
+            await refreshPost();
           }}
           disabled={user?.id === post.user_id}
           className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
