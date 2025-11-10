@@ -18,7 +18,7 @@ export const Profile = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
-  const [userStats, setUserStats] = useState({ posts: 0, likes: 0, achievements: 0 });
+  const [userStats, setUserStats] = useState({ posts: 0, likesGiven: 0, likesReceived: 0, achievements: 0 });
   const [achievements, setAchievements] = useState<any[]>([]);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export const Profile = () => {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
-    const { count: likesCount } = await supabase
+    const { count: likesGivenCount } = await supabase
       .from('post_likes')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
@@ -51,9 +51,16 @@ export const Profile = () => {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('likes_received')
+      .eq('id', user.id)
+      .maybeSingle();
+
     setUserStats({
       posts: postsCount || 0,
-      likes: likesCount || 0,
+      likesGiven: likesGivenCount || 0,
+      likesReceived: profileData?.likes_received || 0,
       achievements: achievementsCount || 0,
     });
   };
@@ -364,14 +371,18 @@ export const Profile = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-4 mt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                   <div className="bg-rose-50 rounded-lg p-4 text-center">
                     <p className="text-2xl font-bold text-rose-600">{userStats.posts}</p>
                     <p className="text-sm text-gray-600">Bài viết</p>
                   </div>
                   <div className="bg-pink-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-pink-600">{userStats.likes}</p>
-                    <p className="text-sm text-gray-600">Yêu thích</p>
+                    <p className="text-2xl font-bold text-pink-600">{userStats.likesReceived}</p>
+                    <p className="text-sm text-gray-600">Được thích</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-bold text-purple-600">{userStats.likesGiven}</p>
+                    <p className="text-sm text-gray-600">Đã thích</p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4 text-center">
                     <p className="text-2xl font-bold text-red-600">{userStats.achievements}</p>

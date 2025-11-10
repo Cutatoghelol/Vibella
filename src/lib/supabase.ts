@@ -14,6 +14,7 @@ export type Profile = {
   goals: string | null;
   health_goals: string[];
   posts_count: number;
+  likes_received: number;
   created_at: string;
   updated_at: string;
 };
