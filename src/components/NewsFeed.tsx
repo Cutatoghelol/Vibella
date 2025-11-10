@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Post } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Heart, MessageCircle, Send, Filter, X } from 'lucide-react';
+import { Heart, MessageCircle, Send, Filter, X, Trash2 } from 'lucide-react';
 
 const MOOD_EMOJIS = ['😊', '😌', '💪', '🌟', '🧘', '❤️', '🎯', '✨'];
 const TOPICS = ['#thiền', '#thể_dục', '#selfcare', '#dinh_dưỡng', '#giấc_ngủ', '#yoga', '#tâm_lý'];
@@ -80,6 +80,15 @@ export const NewsFeed = () => {
     setSelectedTopics((prev) =>
       prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
     );
+  };
+
+  const deletePost = async (postId: string) => {
+    if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
+      if (!error) {
+        loadPosts();
+      }
+    }
   };
 
   return (
@@ -202,7 +211,7 @@ export const NewsFeed = () => {
       {loading ? (
         <div className="text-center py-8 text-gray-500">Đang tải...</div>
       ) : (
-        posts.map((post) => <PostCard key={post.id} post={post} onToggleLike={toggleLike} />)
+        posts.map((post) => <PostCard key={post.id} post={post} onToggleLike={toggleLike} onDelete={deletePost} />)
       )}
     </div>
   );
@@ -211,9 +220,11 @@ export const NewsFeed = () => {
 const PostCard = ({
   post,
   onToggleLike,
+  onDelete,
 }: {
   post: Post;
   onToggleLike: (postId: string, isLiked: boolean) => void;
+  onDelete: (postId: string) => void;
 }) => {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(false);
@@ -269,7 +280,16 @@ const PostCard = ({
           <p className="font-semibold text-gray-900">{post.profiles?.username}</p>
           <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleDateString('vi-VN')}</p>
         </div>
-        {post.mood_emoji && <span className="ml-auto text-2xl">{post.mood_emoji}</span>}
+        {post.mood_emoji && <span className="text-2xl">{post.mood_emoji}</span>}
+        {user?.id === post.user_id && (
+          <button
+            onClick={() => onDelete(post.id)}
+            className="ml-auto p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            title="Xóa bài viết"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {post.content && <p className="text-gray-800 mb-4 whitespace-pre-wrap">{post.content}</p>}
