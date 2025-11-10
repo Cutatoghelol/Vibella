@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { User, Target, Award, Heart, Key } from 'lucide-react';
+import { User, Target, Award, Heart, Key, Upload, X } from 'lucide-react';
 
 export const Profile = () => {
   const { profile, user } = useAuth();
@@ -12,6 +12,7 @@ export const Profile = () => {
   const [bio, setBio] = useState(profile?.bio || '');
   const [goals, setGoals] = useState(profile?.goals || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -66,6 +67,58 @@ export const Profile = () => {
       .order('earned_at', { ascending: false });
 
     setAchievements(data || []);
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn một file ảnh');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ảnh không được vượt quá 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Error uploading avatar:', uploadError);
+        alert('Đã xảy ra lỗi khi upload ảnh');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const newAvatarUrl = urlData.publicUrl;
+      setAvatarUrl(newAvatarUrl);
+
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: newAvatarUrl, updated_at: new Date().toISOString() })
+        .eq('id', user.id);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Đã xảy ra lỗi');
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const handleSave = async () => {
@@ -128,25 +181,43 @@ export const Profile = () => {
       <div className="bg-white rounded-xl shadow-sm p-8">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="flex flex-col items-center">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Avatar"
-                className="w-32 h-32 rounded-full object-cover border-4 border-rose-200"
-              />
-            ) : (
-              <div className="w-32 h-32 bg-gradient-to-br from-rose-500 to-pink-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
-                {username?.[0]?.toUpperCase() || 'U'}
-              </div>
-            )}
-            {isEditing && (
-              <input
-                type="text"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="URL ảnh đại diện"
-                className="mt-4 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent w-full"
-              />
+            <div className="relative">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-rose-200"
+                />
+              ) : (
+                <div className="w-32 h-32 bg-gradient-to-br from-rose-500 to-pink-600 rounded-full flex items-center justify-center text-white text-4xl font-bold">
+                  {username?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
+              {isEditing && (
+                <label className="absolute bottom-0 right-0 w-10 h-10 bg-rose-500 hover:bg-rose-600 rounded-full flex items-center justify-center cursor-pointer text-white shadow-lg transition-colors">
+                  {uploadingAvatar ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Upload className="w-5 h-5" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    disabled={uploadingAvatar}
+                  />
+                </label>
+              )}
+            </div>
+            {isEditing && avatarUrl && (
+              <button
+                onClick={() => setAvatarUrl('')}
+                className="mt-2 text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Xóa ảnh
+              </button>
             )}
           </div>
 
