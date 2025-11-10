@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Moon, Droplets, Footprints, Brain, Calendar } from 'lucide-react';
+import { Moon, Droplets, Footprints, Brain, Calendar, Save } from 'lucide-react';
 
 export const HabitTracker = () => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [habits, setHabits] = useState({
+  const [tempHabits, setTempHabits] = useState({
     sleep_hours: 0,
     water_glasses: 0,
     steps: 0,
     meditation_minutes: 0,
   });
   const [weekData, setWeekData] = useState<any[]>([]);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
     loadHabits();
@@ -30,14 +31,16 @@ export const HabitTracker = () => {
       .maybeSingle();
 
     if (data) {
-      setHabits({
+      const habitData = {
         sleep_hours: data.sleep_hours || 0,
         water_glasses: data.water_glasses || 0,
         steps: data.steps || 0,
         meditation_minutes: data.meditation_minutes || 0,
-      });
+      };
+      setTempHabits(habitData);
     } else {
-      setHabits({ sleep_hours: 0, water_glasses: 0, steps: 0, meditation_minutes: 0 });
+      const emptyHabits = { sleep_hours: 0, water_glasses: 0, steps: 0, meditation_minutes: 0 };
+      setTempHabits(emptyHabits);
     }
   };
 
@@ -59,21 +62,25 @@ export const HabitTracker = () => {
     setWeekData(data || []);
   };
 
-  const saveHabit = async (field: string, value: number) => {
+  const saveAllHabits = async () => {
     if (!user?.id) return;
 
-    const updatedHabits = { ...habits, [field]: value };
-    setHabits(updatedHabits);
+    setSaveMessage('Đang lưu...');
 
     const { error } = await supabase.from('habits').upsert({
       user_id: user.id,
       date: selectedDate,
-      ...updatedHabits,
+      ...tempHabits,
     });
 
     if (!error) {
+      await updateAllChallengeProgress();
       loadWeekData();
-      await updateChallengeProgress(field, value);
+      setSaveMessage('Đã lưu thành công!');
+      setTimeout(() => setSaveMessage(''), 2000);
+    } else {
+      setSaveMessage('Lỗi khi lưu!');
+      setTimeout(() => setSaveMessage(''), 2000);
     }
   };
 
@@ -83,7 +90,7 @@ export const HabitTracker = () => {
     return Math.round(sum / weekData.length);
   };
 
-  const updateChallengeProgress = async (field: string, value: number) => {
+  const updateAllChallengeProgress = async () => {
     if (!user?.id) return;
 
     const fieldToChallengeType: { [key: string]: string } = {
@@ -93,32 +100,33 @@ export const HabitTracker = () => {
       meditation_minutes: 'meditation',
     };
 
-    const challengeType = fieldToChallengeType[field];
-    if (!challengeType) return;
+    for (const [field, challengeType] of Object.entries(fieldToChallengeType)) {
+      const value = tempHabits[field as keyof typeof tempHabits];
 
-    const { data: activeChallenges } = await supabase
-      .from('challenges')
-      .select('id, goal_type')
-      .eq('goal_type', challengeType)
-      .gte('end_date', selectedDate)
-      .lte('start_date', selectedDate);
+      const { data: activeChallenges } = await supabase
+        .from('challenges')
+        .select('id, goal_type')
+        .eq('goal_type', challengeType)
+        .gte('end_date', selectedDate)
+        .lte('start_date', selectedDate);
 
-    if (!activeChallenges || activeChallenges.length === 0) return;
+      if (!activeChallenges || activeChallenges.length === 0) continue;
 
-    for (const challenge of activeChallenges) {
-      const { data: participation } = await supabase
-        .from('challenge_participants')
-        .select('*')
-        .eq('challenge_id', challenge.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (participation) {
-        await supabase
+      for (const challenge of activeChallenges) {
+        const { data: participation } = await supabase
           .from('challenge_participants')
-          .update({ progress: value })
+          .select('*')
           .eq('challenge_id', challenge.id)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (participation) {
+          await supabase
+            .from('challenge_participants')
+            .update({ progress: value })
+            .eq('challenge_id', challenge.id)
+            .eq('user_id', user.id);
+        }
       }
     }
   };
@@ -143,40 +151,57 @@ export const HabitTracker = () => {
           <HabitCard
             icon={<Moon className="w-8 h-8 text-rose-500" />}
             title="Giấc ngủ"
-            value={habits.sleep_hours}
+            value={tempHabits.sleep_hours}
             unit="giờ"
             goal={8}
             color="rose"
-            onChange={(value) => saveHabit('sleep_hours', value)}
+            onChange={(value) => setTempHabits({ ...tempHabits, sleep_hours: value })}
           />
           <HabitCard
             icon={<Droplets className="w-8 h-8 text-blue-500" />}
             title="Nước uống"
-            value={habits.water_glasses}
+            value={tempHabits.water_glasses}
             unit="ly"
             goal={8}
             color="blue"
-            onChange={(value) => saveHabit('water_glasses', value)}
+            onChange={(value) => setTempHabits({ ...tempHabits, water_glasses: value })}
           />
           <HabitCard
             icon={<Footprints className="w-8 h-8 text-green-500" />}
             title="Bước đi"
-            value={habits.steps}
+            value={tempHabits.steps}
             unit="bước"
             goal={10000}
             color="green"
             step={1000}
-            onChange={(value) => saveHabit('steps', value)}
+            onChange={(value) => setTempHabits({ ...tempHabits, steps: value })}
           />
           <HabitCard
             icon={<Brain className="w-8 h-8 text-purple-500" />}
             title="Thiền"
-            value={habits.meditation_minutes}
+            value={tempHabits.meditation_minutes}
             unit="phút"
             goal={20}
             color="purple"
-            onChange={(value) => saveHabit('meditation_minutes', value)}
+            onChange={(value) => setTempHabits({ ...tempHabits, meditation_minutes: value })}
           />
+        </div>
+
+        <div className="mt-6 flex items-center gap-4">
+          <button
+            onClick={saveAllHabits}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all font-medium shadow-md"
+          >
+            <Save className="w-5 h-5" />
+            Cập nhật thối quen
+          </button>
+          {saveMessage && (
+            <span className={`text-sm font-medium ${
+              saveMessage.includes('thành công') ? 'text-green-600' : saveMessage.includes('Lỗi') ? 'text-red-600' : 'text-gray-600'
+            }`}>
+              {saveMessage}
+            </span>
+          )}
         </div>
       </div>
 

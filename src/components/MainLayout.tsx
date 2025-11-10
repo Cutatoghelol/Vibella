@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { Home, User, Trophy, BookOpen, MessageCircle, BarChart3, Target, LogOut } from 'lucide-react';
+import { Home, User, Trophy, MessageCircle, BarChart3, Target, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { NewsFeed } from './NewsFeed';
 import { Profile } from './Profile';
 import { Challenges } from './Challenges';
-import { ExpertContent } from './ExpertContent';
 import { AIChatbot } from './AIChatbot';
 import { Leaderboard } from './Leaderboard';
 import { HabitTracker } from './HabitTracker';
 
-type Tab = 'home' | 'profile' | 'challenges' | 'expert' | 'chat' | 'leaderboard' | 'habits';
+type Tab = 'home' | 'profile' | 'challenges' | 'chat' | 'leaderboard' | 'habits';
 
 export const MainLayout = () => {
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -76,12 +75,6 @@ export const MainLayout = () => {
             onClick={() => setActiveTab('leaderboard')}
           />
           <NavButton
-            icon={<BookOpen className="w-5 h-5" />}
-            label="Chuyên gia"
-            active={activeTab === 'expert'}
-            onClick={() => setActiveTab('expert')}
-          />
-          <NavButton
             icon={<MessageCircle className="w-5 h-5" />}
             label="AI Trợ lý"
             active={activeTab === 'chat'}
@@ -95,7 +88,6 @@ export const MainLayout = () => {
           {activeTab === 'habits' && <HabitTracker />}
           {activeTab === 'challenges' && <Challenges />}
           {activeTab === 'leaderboard' && <Leaderboard />}
-          {activeTab === 'expert' && <ExpertContent />}
           {activeTab === 'chat' && <AIChatbot />}
         </main>
       </div>
