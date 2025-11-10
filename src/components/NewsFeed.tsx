@@ -366,6 +366,13 @@ const PostCard = ({
     loadComments();
   };
 
+  const deleteComment = async (commentId: string) => {
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+    if (!error) {
+      loadComments();
+    }
+  };
+
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
@@ -433,13 +440,26 @@ const PostCard = ({
       {showComments && (
         <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
           {comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3">
+            <div key={comment.id} className="flex gap-3 group">
               <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
                 {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-sm text-gray-900">{comment.profiles?.username}</p>
-                <p className="text-gray-700 text-sm">{comment.content}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-gray-900">{comment.profiles?.username}</p>
+                    <p className="text-gray-700 text-sm">{comment.content}</p>
+                  </div>
+                  {(user?.id === comment.user_id || user?.id === post.user_id) && (
+                    <button
+                      onClick={() => deleteComment(comment.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                      title="Xóa bình luận"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
