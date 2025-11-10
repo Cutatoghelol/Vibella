@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase, Post } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Heart, MessageCircle, Send, Filter, X, Trash2 } from 'lucide-react';
+import { updateLeaderboardScore } from '../lib/leaderboard';
 
 const MOOD_EMOJIS = ['😊', '😌', '💪', '🌟', '🧘', '❤️', '🎯', '✨'];
 const TOPICS = ['#thiền', '#thể_dục', '#selfcare', '#dinh_dưỡng', '#giấc_ngủ', '#yoga', '#tâm_lý'];
@@ -59,6 +60,11 @@ export const NewsFeed = () => {
       return;
     }
 
+    // Update leaderboard score
+    if (user?.id) {
+      await updateLeaderboardScore(user.id);
+    }
+
     setContent('');
     setImageUrl('');
     setSelectedMood('');
@@ -77,6 +83,10 @@ export const NewsFeed = () => {
     }
 
     await updatePostLikesCount(postId);
+
+    // Update leaderboard score
+    await updateLeaderboardScore(user.id);
+
     loadPosts();
   };
 
@@ -283,6 +293,10 @@ const PostCard = ({
     });
 
     await updatePostCommentsCount();
+
+    // Update leaderboard score
+    await updateLeaderboardScore(user.id);
+
     setNewComment('');
     loadComments();
   };
