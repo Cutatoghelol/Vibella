@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Trophy, Users, Target, CheckCircle } from 'lucide-react';
+import { Trophy, Users, Target } from 'lucide-react';
 
 export const Challenges = () => {
   const { user } = useAuth();
@@ -26,9 +26,32 @@ export const Challenges = () => {
   const joinChallenge = async (challengeId: string) => {
     if (!user?.id) return;
 
+    const challenge = challenges.find((c) => c.id === challengeId);
+    if (!challenge) return;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: todayHabit } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('date', today)
+      .maybeSingle();
+
+    const fieldMap: { [key: string]: string } = {
+      sleep: 'sleep_hours',
+      water: 'water_glasses',
+      steps: 'steps',
+      meditation: 'meditation_minutes',
+    };
+
+    const habitField = fieldMap[challenge.goal_type];
+    const currentProgress = todayHabit?.[habitField] || 0;
+
     const { error } = await supabase.from('challenge_participants').insert({
       challenge_id: challengeId,
       user_id: user.id,
+      progress: currentProgress,
     });
 
     if (!error) {

@@ -73,6 +73,7 @@ export const HabitTracker = () => {
 
     if (!error) {
       loadWeekData();
+      await updateChallengeProgress(field, value);
     }
   };
 
@@ -80,6 +81,46 @@ export const HabitTracker = () => {
     if (weekData.length === 0) return 0;
     const sum = weekData.reduce((acc, day) => acc + (day[field] || 0), 0);
     return Math.round(sum / weekData.length);
+  };
+
+  const updateChallengeProgress = async (field: string, value: number) => {
+    if (!user?.id) return;
+
+    const fieldToChallengeType: { [key: string]: string } = {
+      sleep_hours: 'sleep',
+      water_glasses: 'water',
+      steps: 'steps',
+      meditation_minutes: 'meditation',
+    };
+
+    const challengeType = fieldToChallengeType[field];
+    if (!challengeType) return;
+
+    const { data: activeChallenges } = await supabase
+      .from('challenges')
+      .select('id, goal_type')
+      .eq('goal_type', challengeType)
+      .gte('end_date', selectedDate)
+      .lte('start_date', selectedDate);
+
+    if (!activeChallenges || activeChallenges.length === 0) return;
+
+    for (const challenge of activeChallenges) {
+      const { data: participation } = await supabase
+        .from('challenge_participants')
+        .select('*')
+        .eq('challenge_id', challenge.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (participation) {
+        await supabase
+          .from('challenge_participants')
+          .update({ progress: value })
+          .eq('challenge_id', challenge.id)
+          .eq('user_id', user.id);
+      }
+    }
   };
 
   return (
