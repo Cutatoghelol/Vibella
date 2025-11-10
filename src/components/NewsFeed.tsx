@@ -332,6 +332,9 @@ const PostCard = ({
 
   useEffect(() => {
     checkIfLiked();
+  }, [post.id, user?.id]);
+
+  useEffect(() => {
     if (showComments) {
       loadComments();
     }
@@ -437,10 +440,11 @@ const PostCard = ({
       <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
         <button
           onClick={async () => {
+            if (!user?.id) return;
             const currentLikedState = isLiked;
-            setIsLiked(!currentLikedState);
             await onToggleLike(post.id, currentLikedState);
-            await Promise.all([checkIfLiked(), refreshPost()]);
+            await refreshPost();
+            await checkIfLiked();
           }}
           disabled={user?.id === post.user_id}
           className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
