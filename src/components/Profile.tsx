@@ -13,6 +13,7 @@ export const Profile = () => {
   const [goals, setGoals] = useState(profile?.goals || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -148,8 +149,13 @@ export const Profile = () => {
     setPasswordError('');
     setPasswordSuccess('');
 
+    if (!currentPassword) {
+      setPasswordError('Vui lòng nhập mật khẩu hiện tại');
+      return;
+    }
+
     if (newPassword.length < 6) {
-      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự');
+      setPasswordError('Mật khẩu mới phải có ít nhất 6 ký tự');
       return;
     }
 
@@ -158,6 +164,18 @@ export const Profile = () => {
       return;
     }
 
+    // Verify current password by attempting to sign in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user?.email || '',
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setPasswordError('Mật khẩu hiện tại không đúng');
+      return;
+    }
+
+    // Update to new password
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
@@ -168,12 +186,31 @@ export const Profile = () => {
     }
 
     setPasswordSuccess('Đổi mật khẩu thành công!');
+    setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
     setTimeout(() => {
       setShowChangePassword(false);
       setPasswordSuccess('');
     }, 2000);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!user?.email) return;
+
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}`,
+    });
+
+    if (error) {
+      setPasswordError('Không thể gửi email. Vui lòng thử lại.');
+      return;
+    }
+
+    setPasswordSuccess('Đã gửi email đặt lại mật khẩu! Vui lòng kiểm tra hộp thư.');
   };
 
   return (
@@ -357,6 +394,18 @@ export const Profile = () => {
           <div className="max-w-md space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mật khẩu hiện tại
+              </label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                placeholder="Nhập mật khẩu hiện tại"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Mật khẩu mới
               </label>
               <input
@@ -393,24 +442,33 @@ export const Profile = () => {
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={handleChangePassword}
+                  className="px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all"
+                >
+                  Đổi mật khẩu
+                </button>
+                <button
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setCurrentPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setPasswordError('');
+                    setPasswordSuccess('');
+                  }}
+                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Hủy
+                </button>
+              </div>
               <button
-                onClick={handleChangePassword}
-                className="px-6 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all"
+                onClick={handleForgotPassword}
+                className="text-sm text-rose-600 hover:text-rose-700 text-left"
               >
-                Đổi mật khẩu
-              </button>
-              <button
-                onClick={() => {
-                  setShowChangePassword(false);
-                  setNewPassword('');
-                  setConfirmPassword('');
-                  setPasswordError('');
-                  setPasswordSuccess('');
-                }}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Hủy
+                Quên mật khẩu? Nhận email đặt lại
               </button>
             </div>
           </div>
