@@ -67,18 +67,34 @@ export const HabitTracker = () => {
 
     setSaveMessage('Đang lưu...');
 
-    const { error } = await supabase.from('habits').upsert({
-      user_id: user.id,
-      date: selectedDate,
-      ...tempHabits,
-    });
+    try {
+      const { error } = await supabase.from('habits').upsert(
+        {
+          user_id: user.id,
+          date: selectedDate,
+          sleep_hours: tempHabits.sleep_hours,
+          water_glasses: tempHabits.water_glasses,
+          steps: tempHabits.steps,
+          meditation_minutes: tempHabits.meditation_minutes,
+        },
+        {
+          onConflict: 'user_id,date',
+        }
+      );
 
-    if (!error) {
+      if (error) {
+        console.error('Error saving habits:', error);
+        setSaveMessage('Lỗi khi lưu!');
+        setTimeout(() => setSaveMessage(''), 2000);
+        return;
+      }
+
       await updateAllChallengeProgress();
-      loadWeekData();
+      await loadWeekData();
       setSaveMessage('Đã lưu thành công!');
       setTimeout(() => setSaveMessage(''), 2000);
-    } else {
+    } catch (err) {
+      console.error('Unexpected error:', err);
       setSaveMessage('Lỗi khi lưu!');
       setTimeout(() => setSaveMessage(''), 2000);
     }
@@ -193,7 +209,7 @@ export const HabitTracker = () => {
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all font-medium shadow-md"
           >
             <Save className="w-5 h-5" />
-            Cập nhật thối quen
+            Cập nhật thói quen
           </button>
           {saveMessage && (
             <span className={`text-sm font-medium ${
