@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Post } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Heart, MessageCircle, Send, Filter, X, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, Filter, X, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
 import { updateLeaderboardScore } from '../lib/leaderboard';
 
 const MOOD_EMOJIS = ['😊', '😌', '💪', '🌟', '🧘', '❤️', '🎯', '✨'];
@@ -14,6 +14,7 @@ export const NewsFeed = () => {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedMood, setSelectedMood] = useState('');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [filterTopic, setFilterTopic] = useState<string | null>(null);
@@ -42,6 +43,52 @@ export const NewsFeed = () => {
       setPosts(data || []);
     }
     setLoading(false);
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn một file ảnh');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ảnh không được vượt quá 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `posts/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(filePath, file, {
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
+        alert('Đã xảy ra lỗi khi upload ảnh');
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(filePath);
+
+      setImageUrl(urlData.publicUrl);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Đã xảy ra lỗi');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const createPost = async () => {
@@ -158,13 +205,46 @@ export const NewsFeed = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"
               rows={3}
             />
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="URL hình ảnh (không bắt buộc)"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
-            />
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-rose-400 hover:bg-rose-50 transition-colors cursor-pointer">
+                {uploadingImage ? (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Đang tải ảnh...</span>
+                  </div>
+                ) : imageUrl ? (
+                  <div className="flex items-center gap-2 text-rose-600">
+                    <ImageIcon className="w-5 h-5" />
+                    <span>Đã chọn ảnh</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Upload className="w-5 h-5" />
+                    <span>Tải ảnh lên (không bắt buộc)</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={uploadingImage}
+                />
+              </label>
+
+              {imageUrl && (
+                <div className="relative">
+                  <img src={imageUrl} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+                  <button
+                    onClick={() => setImageUrl('')}
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div>
               <p className="text-sm text-gray-600 mb-2">Tâm trạng:</p>
