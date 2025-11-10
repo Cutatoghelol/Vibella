@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { BookOpen, Video, Eye, Clock } from 'lucide-react';
+import { BookOpen, Video, Eye, Clock, X } from 'lucide-react';
 
 export const ExpertContent = () => {
   const [contents, setContents] = useState<any[]>([]);
   const [filter, setFilter] = useState<'all' | 'blog' | 'video'>('all');
   const [loading, setLoading] = useState(true);
+  const [selectedContent, setSelectedContent] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadContent();
@@ -25,6 +27,23 @@ export const ExpertContent = () => {
     const { data } = await query;
     setContents(data || []);
     setLoading(false);
+  };
+
+  const openContent = async (content: any) => {
+    setSelectedContent(content);
+    setShowModal(true);
+
+    await supabase
+      .from('expert_content')
+      .update({ views_count: content.views_count + 1 })
+      .eq('id', content.id);
+
+    loadContent();
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedContent(null);
   };
 
   if (loading) {
@@ -147,12 +166,81 @@ export const ExpertContent = () => {
                   </div>
                 </div>
 
-                <button className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all">
+                <button
+                  onClick={() => openContent(content)}
+                  className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-lg hover:from-rose-600 hover:to-pink-700 transition-all"
+                >
                   {content.content_type === 'blog' ? 'Đọc bài viết' : 'Xem video'}
                 </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showModal && selectedContent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeModal}>
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">{selectedContent.title}</h2>
+              <button
+                onClick={closeModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {selectedContent.content_type === 'video' && selectedContent.video_url ? (
+                <div className="mb-6">
+                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full rounded-lg"
+                      src={selectedContent.video_url}
+                      title={selectedContent.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              ) : selectedContent.thumbnail_url ? (
+                <img
+                  src={selectedContent.thumbnail_url}
+                  alt={selectedContent.title}
+                  className="w-full h-64 object-cover rounded-lg mb-6"
+                />
+              ) : null}
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">Bởi {selectedContent.author}</p>
+                <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                  <div className="flex items-center gap-1">
+                    <Eye className="w-4 h-4" />
+                    <span>{selectedContent.views_count + 1} lượt xem</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    <span>{new Date(selectedContent.created_at).toLocaleDateString('vi-VN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedContent.topics && selectedContent.topics.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {selectedContent.topics.map((topic: string) => (
+                    <span key={topic} className="px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-sm">
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="prose max-w-none">
+                <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{selectedContent.content}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
