@@ -82,8 +82,6 @@ export const NewsFeed = () => {
       await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
     }
 
-    await updatePostLikesCount(postId);
-
     // Update leaderboard score
     await updateLeaderboardScore(user.id);
 
@@ -96,17 +94,6 @@ export const NewsFeed = () => {
     );
   };
 
-  const updatePostLikesCount = async (postId: string) => {
-    const { count } = await supabase
-      .from('post_likes')
-      .select('*', { count: 'exact', head: true })
-      .eq('post_id', postId);
-
-    await supabase
-      .from('posts')
-      .update({ likes_count: count || 0 })
-      .eq('id', postId);
-  };
 
   const deletePost = async (postId: string) => {
     if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
@@ -292,8 +279,6 @@ const PostCard = ({
       content: newComment.trim(),
     });
 
-    await updatePostCommentsCount();
-
     // Update leaderboard score
     await updateLeaderboardScore(user.id);
 
@@ -301,17 +286,6 @@ const PostCard = ({
     loadComments();
   };
 
-  const updatePostCommentsCount = async () => {
-    const { count } = await supabase
-      .from('comments')
-      .select('*', { count: 'exact', head: true })
-      .eq('post_id', post.id);
-
-    await supabase
-      .from('posts')
-      .update({ comments_count: count || 0 })
-      .eq('id', post.id);
-  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
