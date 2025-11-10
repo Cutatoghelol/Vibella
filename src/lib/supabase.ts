@@ -11,6 +11,7 @@ export type Profile = {
   full_name: string | null;
   avatar_url: string | null;
   bio: string | null;
+  goals: string | null;
   health_goals: string[];
   created_at: string;
   updated_at: string;

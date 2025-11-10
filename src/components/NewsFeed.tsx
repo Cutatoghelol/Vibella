@@ -68,11 +68,15 @@ export const NewsFeed = () => {
   };
 
   const toggleLike = async (postId: string, isLiked: boolean) => {
+    if (!user?.id) return;
+
     if (isLiked) {
-      await supabase.from('post_likes').delete().match({ post_id: postId, user_id: user?.id });
+      await supabase.from('post_likes').delete().match({ post_id: postId, user_id: user.id });
     } else {
-      await supabase.from('post_likes').insert({ post_id: postId, user_id: user?.id });
+      await supabase.from('post_likes').insert({ post_id: postId, user_id: user.id });
     }
+
+    await updatePostLikesCount(postId);
     loadPosts();
   };
 
@@ -80,6 +84,18 @@ export const NewsFeed = () => {
     setSelectedTopics((prev) =>
       prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
     );
+  };
+
+  const updatePostLikesCount = async (postId: string) => {
+    const { count } = await supabase
+      .from('post_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', postId);
+
+    await supabase
+      .from('posts')
+      .update({ likes_count: count || 0 })
+      .eq('id', postId);
   };
 
   const deletePost = async (postId: string) => {
@@ -258,16 +274,29 @@ const PostCard = ({
   };
 
   const addComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user?.id) return;
 
     await supabase.from('comments').insert({
       post_id: post.id,
-      user_id: user?.id,
+      user_id: user.id,
       content: newComment.trim(),
     });
 
+    await updatePostCommentsCount();
     setNewComment('');
     loadComments();
+  };
+
+  const updatePostCommentsCount = async () => {
+    const { count } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', post.id);
+
+    await supabase
+      .from('posts')
+      .update({ comments_count: count || 0 })
+      .eq('id', post.id);
   };
 
   return (
@@ -318,7 +347,8 @@ const PostCard = ({
             setIsLiked(!isLiked);
             onToggleLike(post.id, isLiked);
           }}
-          className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors`}
+          disabled={user?.id === post.user_id}
+          className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <Heart className="w-5 h-5" fill={isLiked ? 'currentColor' : 'none'} />
           <span>{post.likes_count}</span>
