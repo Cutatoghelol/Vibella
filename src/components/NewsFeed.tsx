@@ -383,9 +383,11 @@ const PostCard = ({
   };
 
   const deleteComment = async (commentId: string) => {
-    const { error } = await supabase.from('comments').delete().eq('id', commentId);
-    if (!error) {
-      await Promise.all([loadComments(), refreshPost()]);
+    if (confirm('Bạn có chắc chắn muốn xóa bình luận này?')) {
+      const { error } = await supabase.from('comments').delete().eq('id', commentId);
+      if (!error) {
+        await Promise.all([loadComments(), refreshPost()]);
+      }
     }
   };
 
@@ -435,9 +437,10 @@ const PostCard = ({
       <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
         <button
           onClick={async () => {
-            setIsLiked(!isLiked);
-            await onToggleLike(post.id, isLiked);
-            await refreshPost();
+            const currentLikedState = isLiked;
+            setIsLiked(!currentLikedState);
+            await onToggleLike(post.id, currentLikedState);
+            await Promise.all([checkIfLiked(), refreshPost()]);
           }}
           disabled={user?.id === post.user_id}
           className={`flex items-center gap-2 ${isLiked ? 'text-rose-500' : 'text-gray-600'} hover:text-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
